@@ -1,80 +1,63 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import {
-    createTask,
-    listTasks,
-    updateTaskStatus,
-} from "../services/task.service.js";
+    createTaskViaMcp,
+    listTasksViaMcp,
+    updateTaskViaMcp,
+    deleteTaskViaMcp,
+} from "../services/productivityMcp.service.js";
 
 export const createTaskTool = tool(
-    async ({ title, description, priority, dueDate }) => {
-        const task = createTask({
-            title,
-            description,
-            priority,
-            dueDate,
-        });
-
-        return JSON.stringify({
-            success: true,
-            message: `Task created: ${task.title}`,
-            task,
-        });
-    },
+    async (input: any) => JSON.stringify(await createTaskViaMcp(input)),
     {
         name: "create_task",
-        description: "Create a task in the local productivity database.",
+        description: "Create a task",
         schema: z.object({
             title: z.string(),
             description: z.string().optional(),
+            status: z.enum(["pending", "in_progress", "done"]).optional(),
             priority: z.string().optional(),
-            dueDate: z.string().optional(),
+            due_date: z.string().optional(),
+            calendar_event_id: z.string().nullable().optional(),
         }),
-    },
+    } as any,
 );
 
 export const listTasksTool = tool(
-    async ({ status }) => {
-        const tasks = listTasks(status);
-
-        return JSON.stringify({
-            success: true,
-            count: tasks.length,
-            tasks,
-        });
-    },
+    async (input: any) => JSON.stringify(await listTasksViaMcp(input)),
     {
         name: "list_tasks",
-        description: "List tasks from the local productivity database.",
+        description: "List tasks",
         schema: z.object({
-            status: z.enum(["pending", "in_progress", "done"]).optional(),
+            limit: z.number().optional(),
         }),
-    },
+    } as any,
 );
 
-export const updateTaskStatusTool = tool(
-    async ({ id, status }) => {
-        const task = updateTaskStatus(id, status);
-
-        if (!task) {
-            return JSON.stringify({
-                success: false,
-                message: `No task found for id ${id}`,
-            });
-        }
-
-        return JSON.stringify({
-            success: true,
-            message: `Task ${id} updated to ${status}`,
-            task,
-        });
-    },
+export const updateTaskTool = tool(
+    async (input: any) => JSON.stringify(await updateTaskViaMcp(input)),
     {
-        name: "update_task_status",
-        description: "Update task status in the local productivity database.",
+        name: "update_task",
+        description: "Update a task",
         schema: z.object({
-            id: z.number(),
-            status: z.enum(["pending", "in_progress", "done"]),
+            id: z.string(),
+            title: z.string(),
+            description: z.string().optional(),
+            status: z.enum(["pending", "in_progress", "done"]).optional(),
+            priority: z.string().optional(),
+            due_date: z.string().optional(),
+            calendar_event_id: z.string().nullable().optional(),
         }),
-    },
+    } as any,
+);
+
+export const deleteTaskTool = tool(
+    async (input: any) => JSON.stringify(await deleteTaskViaMcp(input)),
+    {
+        name: "delete_task",
+        description: "Delete a task",
+        schema: z.object({
+            id: z.string(),
+        }),
+    } as any,
 );

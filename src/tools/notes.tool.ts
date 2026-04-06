@@ -1,40 +1,59 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
-import { createNote, listNotes } from "../services/notes.service.js";
+import {
+    createNoteViaMcp,
+    listNotesViaMcp,
+    updateNoteViaMcp,
+    deleteNoteViaMcp,
+} from "../services/productivityMcp.service.js";
 
 export const createNoteTool = tool(
-    async (input: { title?: string; content: string }) => {
-        const note = createNote({ title: input.title, content: input.content });
-
-        return JSON.stringify({
-            success: true,
-            message: "Note created successfully",
-            note,
-        });
-    },
+    async (input: any) => JSON.stringify(await createNoteViaMcp(input)),
     {
         name: "create_note",
-        description: "Create a note in the local productivity database.",
+        description: "Create a note",
         schema: z.object({
             title: z.string().optional(),
             content: z.string(),
+            task_id: z.string().nullable().optional(),
+            calendar_event_id: z.string().nullable().optional(),
         }),
     } as any,
 );
 
 export const listNotesTool = tool(
-    async () => {
-        const notes = listNotes();
-
-        return JSON.stringify({
-            success: true,
-            count: notes.length,
-            notes,
-        });
-    },
+    async (input: any) => JSON.stringify(await listNotesViaMcp(input)),
     {
         name: "list_notes",
-        description: "List all notes from the local productivity database.",
-        schema: z.object({}),
+        description: "List notes",
+        schema: z.object({
+            limit: z.number().optional(),
+        }),
+    } as any,
+);
+
+export const updateNoteTool = tool(
+    async (input: any) => JSON.stringify(await updateNoteViaMcp(input)),
+    {
+        name: "update_note",
+        description: "Update a note",
+        schema: z.object({
+            id: z.string(),
+            title: z.string().optional(),
+            content: z.string(),
+            task_id: z.string().nullable().optional(),
+            calendar_event_id: z.string().nullable().optional(),
+        }),
+    } as any,
+);
+
+export const deleteNoteTool = tool(
+    async (input: any) => JSON.stringify(await deleteNoteViaMcp(input)),
+    {
+        name: "delete_note",
+        description: "Delete a note",
+        schema: z.object({
+            id: z.string(),
+        }),
     } as any,
 );

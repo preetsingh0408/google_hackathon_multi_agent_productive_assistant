@@ -2,22 +2,26 @@ import { Database } from "bun:sqlite";
 
 export const db = new Database("app.db");
 
-// create tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
     priority TEXT,
     due_date TEXT,
-    created_at TEXT NOT NULL
+    calendar_event_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS notes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     title TEXT,
     content TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    task_id TEXT,
+    calendar_event_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT
   );
 `);

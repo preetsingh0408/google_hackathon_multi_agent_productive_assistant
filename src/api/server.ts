@@ -1,8 +1,10 @@
 import express from "express";
 import { supervisorAgent } from "../agents/supervisor.agent.js";
-import { listTasks } from "../services/task.service.js";
-import { listNotes } from "../services/notes.service.js";
 import { listCalendarEventsViaMcp } from "../services/calendarMcp.service.js";
+import {
+    listTasksViaMcp,
+    listNotesViaMcp,
+} from "../services/productivityMcp.service.js";
 
 export function createServer() {
     const app = express();
@@ -46,17 +48,23 @@ export function createServer() {
         }
     });
 
-    app.get("/tasks", (_req, res) => {
+    // ✅ Now using MCP-style layer
+    app.get("/tasks", async (_req, res) => {
+        const tasks = await listTasksViaMcp();
+
         res.json({
             success: true,
-            tasks: listTasks(),
+            tasks,
         });
     });
 
-    app.get("/notes", (_req, res) => {
+    // ✅ Now using MCP-style layer
+    app.get("/notes", async (_req, res) => {
+        const notes = await listNotesViaMcp();
+
         res.json({
             success: true,
-            notes: listNotes(),
+            notes,
         });
     });
 

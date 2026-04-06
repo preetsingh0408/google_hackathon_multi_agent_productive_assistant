@@ -8,6 +8,7 @@
         "esModuleInterop": true,
         "resolveJsonModule": true,
         "outDir": "dist",
+        "typeRoots": ["./node_modules/bun-types", "./node_modules/@types"],
         "types": ["bun"]
     },
     "include": ["index.ts", "src/**/*.ts"]
