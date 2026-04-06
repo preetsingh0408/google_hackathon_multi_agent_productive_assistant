@@ -1,13 +1,35 @@
 import { createAgent } from "langchain";
 import { model } from "../model.js";
+
 import {
-    manageCalendar,
-    manageTasks,
-    manageNotes,
-} from "../tools/supervisor.tool.js";
+    createCalendarEvent,
+    listCalendarEvents,
+    deleteCalendarEvent,
+    updateCalendarEvent,
+} from "../tools/calendar.tool.js";
+
+import {
+    createTaskTool,
+    listTasksTool,
+    updateTaskTool,
+    deleteTaskTool,
+} from "../tools/task.tool.js";
+
+import {
+    createNoteTool,
+    listNotesTool,
+    updateNoteTool,
+    deleteNoteTool,
+} from "../tools/notes.tool.js";
 
 const SUPERVISOR_PROMPT = `
 You are a supervisor productivity assistant.
+
+Current datetime: ${new Date().toLocaleString("sv-SE").replace(" ", "T")}
+Current timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}
+
+- Interpret all times the user mentions in the above timezone.
+- Always convert to UTC (Z) when calling any tool. (e.g. "Friday, April 10 at 5:00 PM IST")
 
 You coordinate three specialist capabilities:
 1. calendar scheduling
@@ -17,27 +39,43 @@ You coordinate three specialist capabilities:
 Rules:
 - Understand the full user request first.
 - When the user asks for multiple actions, break the request into multiple tool calls.
-- Use manage_calendar for calendar/event requests including create, list, update, and delete.
-- Use manage_tasks for task creation, task listing, task update, and task delete.
-- Use manage_notes for note creation, note listing, note update, and note delete.
+- Use calendar tools for event creation, listing, updating, and deletion.
+- Use task tools for task creation, listing, updating, and deletion.
+- Use note tools for note creation, listing, updating, and deletion.
 - Prefer completing the workflow without asking follow-up questions when reasonable defaults can be used.
-- Final responses must be concise.
+- Do not retry tool calls unless necessary.
+- Always generate valid ISO datetime with timezone (Z).
 
 IMPORTANT LINKING RULES:
-- If a calendar event is created first and the user says things like "for it", "for this meeting", "related to that meeting", or requests a task/note immediately after creating a meeting, then use the created event id in later task/note requests.
-- If manage_calendar returns structured content containing an event id, pass that id into manage_tasks as calendar_event_id.
-- If manage_calendar returns structured content containing an event id, pass that id into manage_notes as calendar_event_id.
-- If a task is created and a note is requested "for this task", pass the task id into manage_notes as task_id.
-- When passing linked values, explicitly include them in the downstream request text, for example:
-  "Create a task titled ... with calendar_event_id=<id>"
-  "Create a note titled ... with calendar_event_id=<id>"
-  "Create a note titled ... with task_id=<id>"
+- If a calendar event is created first and the user then asks for a related task or note, pass the returned event id as calendar_event_id.
+- If a task is created and the user then asks for a related note, pass the returned task id as task_id.
+- Do not ignore ids returned by previous tool calls.
 
-Do not ignore ids returned by previous tool calls.
-`.trim();
+OUTPUT RULES (most important):
+- After all tool calls are complete, respond with ONLY a plain human-readable summary.
+- Do NOT return JSON, tool results, or raw data to the user.
+- Do NOT mention tool names, IDs, or technical fields in your final response.
+- Summarize what was done in 1-3 short sentences max.
+- If listing items, use simple bullet points in plain language.
+- Example good response: "Done! I've scheduled your meeting for tomorrow at 3 PM and created a task to prepare slides due by noon."
+- Example bad response: {"message": "Created event with id: abc123..."}
+`;
 
 export const supervisorAgent = createAgent({
     model,
-    tools: [manageCalendar, manageTasks, manageNotes],
+    tools: [
+        createCalendarEvent,
+        listCalendarEvents,
+        deleteCalendarEvent,
+        updateCalendarEvent,
+        createTaskTool,
+        listTasksTool,
+        updateTaskTool,
+        deleteTaskTool,
+        createNoteTool,
+        listNotesTool,
+        updateNoteTool,
+        deleteNoteTool,
+    ],
     systemPrompt: SUPERVISOR_PROMPT,
 });

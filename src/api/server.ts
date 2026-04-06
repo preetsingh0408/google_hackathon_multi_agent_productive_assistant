@@ -38,7 +38,7 @@ export function createServer() {
             return res.json({
                 success: true,
                 message: finalText,
-                raw: result,
+                // raw: result,
             });
         } catch (error) {
             return res.status(500).json({
@@ -49,6 +49,34 @@ export function createServer() {
     });
 
     // ✅ Now using MCP-style layer
+
+    // app.post("/chat", async (req, res) => {
+    //     try {
+    //         const { message } = req.body;
+
+    //         if (!message?.trim()) {
+    //             return res.status(400).json({
+    //                 success: false,
+    //                 error: "message is required",
+    //             });
+    //         }
+
+    //         const result = await supervisorAgent.invoke({
+    //             messages: [{ role: "user", content: message }],
+    //         });
+
+    //         return res.json({
+    //             success: true,
+    //             message: result.output, // 👈 ONLY THIS
+    //         });
+    //     } catch (error) {
+    //         return res.status(500).json({
+    //             success: false,
+    //             error: error instanceof Error ? error.message : "Unknown error",
+    //         });
+    //     }
+    // });
+
     app.get("/tasks", async (_req, res) => {
         const tasks = await listTasksViaMcp();
 

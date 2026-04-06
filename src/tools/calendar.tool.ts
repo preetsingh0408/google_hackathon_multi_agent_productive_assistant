@@ -28,26 +28,71 @@ const updateCalendarEventSchema = z.object({
     end: z.string().optional(),
 });
 
+function normalizeIsoDateTime(value?: string) {
+    if (!value) return value;
+
+    const trimmed = value.trim();
+
+    // already has timezone
+    if (/[zZ]$|[+-]\d{2}:\d{2}$/.test(trimmed)) return trimmed;
+
+    // add seconds + Z
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) {
+        return `${trimmed}:00Z`;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+        return `${trimmed}Z`;
+    }
+
+    return trimmed;
+}
+
+function unwrapMcp(result: any) {
+    const isError = result?.isError;
+
+    const text = result?.content?.find((c: any) => c.type === "text")?.text;
+
+    if (!text) return { ok: !isError, data: result };
+
+    try {
+        return { ok: !isError, data: JSON.parse(text) };
+    } catch {
+        return { ok: !isError, data: text };
+    }
+}
+
 export const createCalendarEvent = tool(
     async (input: any) => {
-        const { title, description, start, end } = input;
+        try {
+            const result = await createCalendarEventViaMcp({
+                title: input.title,
+                description: input.description,
+                start: normalizeIsoDateTime(input.start) as string,
+                end: normalizeIsoDateTime(input.end) as string,
+            });
 
-        const result = await createCalendarEventViaMcp({
-            title,
-            description,
-            start,
-            end,
-        });
+            const parsed = unwrapMcp(result);
 
-        return JSON.stringify({
-            success: true,
-            message: "Event created successfully",
-            data: result,
-        });
+            if (!parsed.ok) {
+                return JSON.stringify({ success: false, error: parsed.data });
+            }
+
+            return JSON.stringify({
+                success: true,
+                data: parsed.data, // 👈 flat JSON
+            });
+        } catch (err: any) {
+            return JSON.stringify({
+                success: false,
+                error: err.message,
+            });
+        }
     },
     {
         name: "create_calendar_event",
-        description: "Create a calendar event",
+        description:
+            "Create calendar event. start/end MUST be ISO datetime with timezone (e.g. 2026-04-07T21:00:00Z)",
         schema: createCalendarEventSchema,
     } as any,
 );
