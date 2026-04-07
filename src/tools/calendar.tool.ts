@@ -6,6 +6,7 @@ import {
     deleteCalendarEventViaMcp,
     updateCalendarEventViaMcp,
 } from "../services/calendarMcp.service.js";
+import { withTiming } from "../utils/logger.js";
 
 const createCalendarEventSchema = z.object({
     title: z.string(),
@@ -63,32 +64,41 @@ function unwrapMcp(result: any) {
 }
 
 export const createCalendarEvent = tool(
-    async (input: any) => {
-        try {
-            const result = await createCalendarEventViaMcp({
-                title: input.title,
-                description: input.description,
-                start: normalizeIsoDateTime(input.start) as string,
-                end: normalizeIsoDateTime(input.end) as string,
-            });
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "create_calendar_event",
+            async () => {
+                try {
+                    const result = await createCalendarEventViaMcp({
+                        title: input.title,
+                        description: input.description,
+                        start: normalizeIsoDateTime(input.start) as string,
+                        end: normalizeIsoDateTime(input.end) as string,
+                    });
 
-            const parsed = unwrapMcp(result);
+                    const parsed = unwrapMcp(result);
 
-            if (!parsed.ok) {
-                return JSON.stringify({ success: false, error: parsed.data });
-            }
+                    if (!parsed.ok) {
+                        return JSON.stringify({
+                            success: false,
+                            error: parsed.data,
+                        });
+                    }
 
-            return JSON.stringify({
-                success: true,
-                data: parsed.data, // 👈 flat JSON
-            });
-        } catch (err: any) {
-            return JSON.stringify({
-                success: false,
-                error: err.message,
-            });
-        }
-    },
+                    return JSON.stringify({
+                        success: true,
+                        data: parsed.data,
+                    });
+                } catch (err: any) {
+                    return JSON.stringify({
+                        success: false,
+                        error: err.message,
+                    });
+                }
+            },
+            { input },
+        ),
     {
         name: "create_calendar_event",
         description:
@@ -98,15 +108,30 @@ export const createCalendarEvent = tool(
 );
 
 export const listCalendarEvents = tool(
-    async (_input: any) => {
-        const result = await listCalendarEventsViaMcp();
+    async (_input: any) =>
+        withTiming("tool", "list_calendar_events", async () => {
+            try {
+                const result = await listCalendarEventsViaMcp();
+                const parsed = unwrapMcp(result);
 
-        return JSON.stringify({
-            success: true,
-            message: "Fetched scheduled events",
-            data: result,
-        });
-    },
+                if (!parsed.ok) {
+                    return JSON.stringify({
+                        success: false,
+                        error: parsed.data,
+                    });
+                }
+
+                return JSON.stringify({
+                    success: true,
+                    data: parsed.data,
+                });
+            } catch (err: any) {
+                return JSON.stringify({
+                    success: false,
+                    error: err.message,
+                });
+            }
+        }),
     {
         name: "list_calendar_events",
         description: "Retrieve all scheduled calendar events",
@@ -115,19 +140,36 @@ export const listCalendarEvents = tool(
 );
 
 export const deleteCalendarEvent = tool(
-    async (input: any) => {
-        const { id } = input;
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "delete_calendar_event",
+            async () => {
+                try {
+                    const { id } = input;
+                    const result = await deleteCalendarEventViaMcp({ id });
+                    const parsed = unwrapMcp(result);
 
-        const result = await deleteCalendarEventViaMcp({
-            id,
-        });
+                    if (!parsed.ok) {
+                        return JSON.stringify({
+                            success: false,
+                            error: parsed.data,
+                        });
+                    }
 
-        return JSON.stringify({
-            success: true,
-            message: `Event ${id} deleted successfully`,
-            data: result,
-        });
-    },
+                    return JSON.stringify({
+                        success: true,
+                        data: parsed.data,
+                    });
+                } catch (err: any) {
+                    return JSON.stringify({
+                        success: false,
+                        error: err.message,
+                    });
+                }
+            },
+            { input },
+        ),
     {
         name: "delete_calendar_event",
         description: "Delete a calendar event by event ID",
@@ -136,23 +178,44 @@ export const deleteCalendarEvent = tool(
 );
 
 export const updateCalendarEvent = tool(
-    async (input: any) => {
-        const { id, title, description, start, end } = input;
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "update_calendar_event",
+            async () => {
+                try {
+                    const { id, title, description, start, end } = input;
 
-        const result = await updateCalendarEventViaMcp({
-            id,
-            title,
-            description,
-            start,
-            end,
-        });
+                    const result = await updateCalendarEventViaMcp({
+                        id,
+                        title,
+                        description,
+                        start,
+                        end,
+                    });
 
-        return JSON.stringify({
-            success: true,
-            message: `Event ${id} updated successfully`,
-            data: result,
-        });
-    },
+                    const parsed = unwrapMcp(result);
+
+                    if (!parsed.ok) {
+                        return JSON.stringify({
+                            success: false,
+                            error: parsed.data,
+                        });
+                    }
+
+                    return JSON.stringify({
+                        success: true,
+                        data: parsed.data,
+                    });
+                } catch (err: any) {
+                    return JSON.stringify({
+                        success: false,
+                        error: err.message,
+                    });
+                }
+            },
+            { input },
+        ),
     {
         name: "update_calendar_event",
         description: "Update a calendar event by event ID",

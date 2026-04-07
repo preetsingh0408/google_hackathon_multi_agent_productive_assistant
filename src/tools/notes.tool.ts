@@ -5,10 +5,18 @@ import {
     listNotesViaMcp,
     updateNoteViaMcp,
     deleteNoteViaMcp,
+    deleteNotesByCalendarEventViaMcp,
 } from "../services/productivityMcp.service.js";
+import { withTiming } from "../utils/logger.js";
 
 export const createNoteTool = tool(
-    async (input: any) => JSON.stringify(await createNoteViaMcp(input)),
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "create_note",
+            async () => JSON.stringify(await createNoteViaMcp(input)),
+            { input },
+        ),
     {
         name: "create_note",
         description: "Create a note",
@@ -22,7 +30,13 @@ export const createNoteTool = tool(
 );
 
 export const listNotesTool = tool(
-    async (input: any) => JSON.stringify(await listNotesViaMcp(input)),
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "list_notes",
+            async () => JSON.stringify(await listNotesViaMcp(input)),
+            { input },
+        ),
     {
         name: "list_notes",
         description: "List notes",
@@ -33,7 +47,13 @@ export const listNotesTool = tool(
 );
 
 export const updateNoteTool = tool(
-    async (input: any) => JSON.stringify(await updateNoteViaMcp(input)),
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "update_note",
+            async () => JSON.stringify(await updateNoteViaMcp(input)),
+            { input },
+        ),
     {
         name: "update_note",
         description: "Update a note",
@@ -48,12 +68,37 @@ export const updateNoteTool = tool(
 );
 
 export const deleteNoteTool = tool(
-    async (input: any) => JSON.stringify(await deleteNoteViaMcp(input)),
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "delete_note",
+            async () => JSON.stringify(await deleteNoteViaMcp(input)),
+            { input },
+        ),
     {
         name: "delete_note",
         description: "Delete a note",
         schema: z.object({
             id: z.string(),
+        }),
+    } as any,
+);
+
+export const deleteMeetingNotesTool = tool(
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "delete_meeting_notes",
+            async () =>
+                JSON.stringify(await deleteNotesByCalendarEventViaMcp(input)),
+            { input },
+        ),
+    {
+        name: "delete_meeting_notes",
+        description:
+            "Delete notes linked to meetings. If calendar_event_id is omitted, deletes all notes that have calendar_event_id.",
+        schema: z.object({
+            calendar_event_id: z.string().nullable().optional(),
         }),
     } as any,
 );

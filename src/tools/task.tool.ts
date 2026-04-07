@@ -5,10 +5,18 @@ import {
     listTasksViaMcp,
     updateTaskViaMcp,
     deleteTaskViaMcp,
+    deleteTasksByCalendarEventViaMcp,
 } from "../services/productivityMcp.service.js";
+import { withTiming } from "../utils/logger.js";
 
 export const createTaskTool = tool(
-    async (input: any) => JSON.stringify(await createTaskViaMcp(input)),
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "create_task",
+            async () => JSON.stringify(await createTaskViaMcp(input)),
+            { input },
+        ),
     {
         name: "create_task",
         description: "Create a task",
@@ -24,7 +32,13 @@ export const createTaskTool = tool(
 );
 
 export const listTasksTool = tool(
-    async (input: any) => JSON.stringify(await listTasksViaMcp(input)),
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "list_tasks",
+            async () => JSON.stringify(await listTasksViaMcp(input)),
+            { input },
+        ),
     {
         name: "list_tasks",
         description: "List tasks",
@@ -35,7 +49,13 @@ export const listTasksTool = tool(
 );
 
 export const updateTaskTool = tool(
-    async (input: any) => JSON.stringify(await updateTaskViaMcp(input)),
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "update_task",
+            async () => JSON.stringify(await updateTaskViaMcp(input)),
+            { input },
+        ),
     {
         name: "update_task",
         description: "Update a task",
@@ -52,12 +72,37 @@ export const updateTaskTool = tool(
 );
 
 export const deleteTaskTool = tool(
-    async (input: any) => JSON.stringify(await deleteTaskViaMcp(input)),
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "delete_task",
+            async () => JSON.stringify(await deleteTaskViaMcp(input)),
+            { input },
+        ),
     {
         name: "delete_task",
         description: "Delete a task",
         schema: z.object({
             id: z.string(),
+        }),
+    } as any,
+);
+
+export const deleteMeetingTasksTool = tool(
+    async (input: any) =>
+        withTiming(
+            "tool",
+            "delete_meeting_tasks",
+            async () =>
+                JSON.stringify(await deleteTasksByCalendarEventViaMcp(input)),
+            { input },
+        ),
+    {
+        name: "delete_meeting_tasks",
+        description:
+            "Delete tasks linked to meetings. If calendar_event_id is omitted, deletes all tasks that have calendar_event_id.",
+        schema: z.object({
+            calendar_event_id: z.string().nullable().optional(),
         }),
     } as any,
 );

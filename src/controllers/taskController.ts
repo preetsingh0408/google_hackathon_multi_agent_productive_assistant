@@ -76,7 +76,60 @@ export function updateTask(task: Task): boolean {
     return true;
 }
 
+export function deleteAllTasks() {
+    const tasks = listTasks();
+    const deleted_ids: string[] = [];
+
+    for (const task of tasks) {
+        if (!task.id) {
+            continue;
+        }
+
+        if (deleteTask(task.id)) {
+            deleted_ids.push(task.id);
+        }
+    }
+
+    return {
+        deleted_count: deleted_ids.length,
+        deleted_ids,
+        matched_count: tasks.length,
+    };
+}
+
 export function deleteTask(id: string): boolean {
     const result = db.prepare(`DELETE FROM tasks WHERE id = ?`).run(id);
     return result.changes > 0;
+}
+
+export function deleteTasksByCalendarEvent(calendar_event_id?: string | null) {
+    const tasks = listTasks();
+    const targetEventId = calendar_event_id ?? null;
+
+    const candidates = tasks.filter((task) => {
+        if (targetEventId) {
+            return task.calendar_event_id === targetEventId;
+        }
+
+        return Boolean(task.calendar_event_id);
+    });
+
+    const deleted_ids: string[] = [];
+
+    for (const task of candidates) {
+        if (!task.id) {
+            continue;
+        }
+
+        if (deleteTask(task.id)) {
+            deleted_ids.push(task.id);
+        }
+    }
+
+    return {
+        deleted_count: deleted_ids.length,
+        deleted_ids,
+        matched_count: candidates.length,
+        calendar_event_id: targetEventId,
+    };
 }

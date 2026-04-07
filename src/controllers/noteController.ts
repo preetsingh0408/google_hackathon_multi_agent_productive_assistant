@@ -74,3 +74,56 @@ export function deleteNote(id: string): boolean {
     const result = db.prepare(`DELETE FROM notes WHERE id = ?`).run(id);
     return result.changes > 0;
 }
+
+export function deleteAllNotes() {
+    const notes = listNotes();
+    const deleted_ids: string[] = [];
+
+    for (const note of notes) {
+        if (!note.id) {
+            continue;
+        }
+
+        if (deleteNote(note.id)) {
+            deleted_ids.push(note.id);
+        }
+    }
+
+    return {
+        deleted_count: deleted_ids.length,
+        deleted_ids,
+        matched_count: notes.length,
+    };
+}
+
+export function deleteNotesByCalendarEvent(calendar_event_id?: string | null) {
+    const notes = listNotes();
+    const targetEventId = calendar_event_id ?? null;
+
+    const candidates = notes.filter((note) => {
+        if (targetEventId) {
+            return note.calendar_event_id === targetEventId;
+        }
+
+        return Boolean(note.calendar_event_id);
+    });
+
+    const deleted_ids: string[] = [];
+
+    for (const note of candidates) {
+        if (!note.id) {
+            continue;
+        }
+
+        if (deleteNote(note.id)) {
+            deleted_ids.push(note.id);
+        }
+    }
+
+    return {
+        deleted_count: deleted_ids.length,
+        deleted_ids,
+        matched_count: candidates.length,
+        calendar_event_id: targetEventId,
+    };
+}

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { logEvent, withTiming } from "../utils/logger.js";
 
 const BASE_URL = process.env.CALENDAR_MCP_BASE_URL;
 
@@ -63,45 +64,57 @@ async function parseMcpResponse(response: Response) {
 }
 
 async function initializeMcpSession() {
-    const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        Accept: "application/json, text/event-stream",
-    };
+    return withTiming(
+        "remote",
+        "calendar_mcp.initialize",
+        async () => {
+            const headers: Record<string, string> = {
+                "Content-Type": "application/json",
+                Accept: "application/json, text/event-stream",
+            };
 
-    if (mcpSessionId) {
-        headers["mcp-session-id"] = mcpSessionId;
-    }
+            if (mcpSessionId) {
+                headers["mcp-session-id"] = mcpSessionId;
+            }
 
-    const response = await fetch(MCP_URL, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: nextId(),
-            method: "initialize",
-            params: {
-                protocolVersion: "2024-11-05",
-                capabilities: {},
-                clientInfo: {
-                    name: "supervisor-agent",
-                    version: "1.0.0",
-                },
-            },
-        }),
-    });
+            const response = await fetch(MCP_URL, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                    jsonrpc: "2.0",
+                    id: nextId(),
+                    method: "initialize",
+                    params: {
+                        protocolVersion: "2024-11-05",
+                        capabilities: {},
+                        clientInfo: {
+                            name: "supervisor-agent",
+                            version: "1.0.0",
+                        },
+                    },
+                }),
+            });
 
-    const sessionHeader = response.headers.get("mcp-session-id");
-    if (sessionHeader) {
-        mcpSessionId = sessionHeader;
-    }
+            const sessionHeader = response.headers.get("mcp-session-id");
+            if (sessionHeader) {
+                mcpSessionId = sessionHeader;
+                logEvent("remote", "calendar_mcp.session.updated", {
+                    session_id_preview: mcpSessionId.slice(0, 8),
+                });
+            }
 
-    const data = await parseMcpResponse(response);
+            const data = await parseMcpResponse(response);
 
-    if (data.error) {
-        throw new Error(`MCP initialize error: ${JSON.stringify(data.error)}`);
-    }
+            if (data.error) {
+                throw new Error(
+                    `MCP initialize error: ${JSON.stringify(data.error)}`,
+                );
+            }
 
-    return data;
+            return data;
+        },
+        { url: MCP_URL },
+    );
 }
 
 async function callMcp(method: string, params?: Record<string, unknown>) {
@@ -109,40 +122,54 @@ async function callMcp(method: string, params?: Record<string, unknown>) {
         await initializeMcpSession();
     }
 
-    const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        Accept: "application/json, text/event-stream",
-    };
+    return withTiming(
+        "remote",
+        "calendar_mcp.call",
+        async () => {
+            const headers: Record<string, string> = {
+                "Content-Type": "application/json",
+                Accept: "application/json, text/event-stream",
+            };
 
-    if (mcpSessionId) {
-        headers["mcp-session-id"] = mcpSessionId;
-    }
+            if (mcpSessionId) {
+                headers["mcp-session-id"] = mcpSessionId;
+            }
 
-    const response = await fetch(MCP_URL, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: nextId(),
+            const response = await fetch(MCP_URL, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                    jsonrpc: "2.0",
+                    id: nextId(),
+                    method,
+                    params,
+                }),
+            });
+
+            const sessionHeader = response.headers.get("mcp-session-id");
+            if (sessionHeader) {
+                mcpSessionId = sessionHeader;
+            }
+
+            const data = await parseMcpResponse(response);
+
+            if (data.error) {
+                throw new Error(
+                    `MCP method ${method} failed: ${JSON.stringify(data.error)}`,
+                );
+            }
+
+            return data.result;
+        },
+        {
+            url: MCP_URL,
             method,
-            params,
-        }),
-    });
-
-    const sessionHeader = response.headers.get("mcp-session-id");
-    if (sessionHeader) {
-        mcpSessionId = sessionHeader;
-    }
-
-    const data = await parseMcpResponse(response);
-
-    if (data.error) {
-        throw new Error(
-            `MCP method ${method} failed: ${JSON.stringify(data.error)}`,
-        );
-    }
-
-    return data.result;
+            tool:
+                method === "tools/call"
+                    ? (params?.name as string | undefined)
+                    : undefined,
+        },
+    );
 }
 
 export async function createCalendarEventViaMcp(

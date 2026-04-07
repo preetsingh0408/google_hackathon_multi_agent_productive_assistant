@@ -8,8 +8,8 @@
         "esModuleInterop": true,
         "resolveJsonModule": true,
         "outDir": "dist",
-        "typeRoots": ["./node_modules/bun-types", "./node_modules/@types"],
-        "types": ["bun"]
+        "typeRoots": ["./node_modules", "./node_modules/@types"],
+        "types": ["bun-types"]
     },
     "include": ["index.ts", "src/**/*.ts"]
 }

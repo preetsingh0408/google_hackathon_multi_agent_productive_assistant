@@ -13,6 +13,7 @@ import {
     listTasksTool,
     updateTaskTool,
     deleteTaskTool,
+    deleteMeetingTasksTool,
 } from "../tools/task.tool.js";
 
 import {
@@ -20,6 +21,7 @@ import {
     listNotesTool,
     updateNoteTool,
     deleteNoteTool,
+    deleteMeetingNotesTool,
 } from "../tools/notes.tool.js";
 
 const SUPERVISOR_PROMPT = `
@@ -45,6 +47,8 @@ Rules:
 - Prefer completing the workflow without asking follow-up questions when reasonable defaults can be used.
 - Do not retry tool calls unless necessary.
 - Always generate valid ISO datetime with timezone (Z).
+    - If user asks to "cancel/delete all meeting tasks and notes", call delete_meeting_tasks and delete_meeting_notes exactly once each.
+    - For that intent, do not loop through list_* + delete_* one-by-one unless the user explicitly asks for per-item deletion.
 
 IMPORTANT LINKING RULES:
 - If a calendar event is created first and the user then asks for a related task or note, pass the returned event id as calendar_event_id.
@@ -72,10 +76,12 @@ export const supervisorAgent = createAgent({
         listTasksTool,
         updateTaskTool,
         deleteTaskTool,
+        deleteMeetingTasksTool,
         createNoteTool,
         listNotesTool,
         updateNoteTool,
         deleteNoteTool,
+        deleteMeetingNotesTool,
     ],
     systemPrompt: SUPERVISOR_PROMPT,
 });
