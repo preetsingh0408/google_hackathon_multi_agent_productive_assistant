@@ -21,8 +21,47 @@ function isDeleteAllNotesIntent(message: string) {
     );
 }
 
+function normalizeScheduleResponse(raw: any) {
+    if (typeof raw === "string") {
+        try {
+            return JSON.parse(raw);
+        } catch {
+            return raw;
+        }
+    }
+
+    const textPayload = raw?.content?.find((c: any) => c.type === "text")?.text;
+    if (typeof textPayload === "string") {
+        try {
+            return JSON.parse(textPayload);
+        } catch {
+            return textPayload;
+        }
+    }
+
+    return raw;
+}
+
 export function createServer() {
     const app = express();
+
+    // CORS middleware
+    app.use((_req, res, next) => {
+        res.header("Access-Control-Allow-Origin", "*");
+        res.header(
+            "Access-Control-Allow-Methods",
+            "GET, POST, PUT, DELETE, OPTIONS",
+        );
+        res.header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, Authorization",
+        );
+        if (_req.method === "OPTIONS") {
+            return res.sendStatus(200);
+        }
+        next();
+    });
+
     app.use(express.json());
 
     app.get("/health", (_req, res) => {
@@ -142,7 +181,8 @@ export function createServer() {
 
     app.get("/schedule", async (_req, res) => {
         try {
-            const schedules = await listCalendarEventsViaMcp();
+            const schedulesRaw = await listCalendarEventsViaMcp();
+            const schedules = normalizeScheduleResponse(schedulesRaw);
 
             return res.json({
                 success: true,
